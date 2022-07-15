@@ -160,9 +160,16 @@ class ImpalaAdapter(SQLAdapter):
 
         # execute the macro and parse the data
         if not columns:
-            rows: List[agate.Row] = super().get_columns_in_relation(relation)
-            columns = self.parse_describe_extended(relation, rows)
-
+            try:
+                rows: List[agate.Row] = super().get_columns_in_relation(relation)
+                columns = self.parse_describe_extended(relation, rows)
+            except dbt.exceptions.RuntimeException as e:
+                # impala would throw error when table doesn't exist
+                errmsg = getattr(e, "msg", "")
+                if "Table or view not found" in errmsg or "NoSuchTableException" in errmsg:
+                    pass
+                else:
+                    raise e
         return columns
 
     def parse_describe_extended(
@@ -386,4 +393,9 @@ class ImpalaAdapter(SQLAdapter):
             as_dict['table_database'] = relation.database
 
             yield as_dict
- 
+
+    def timestamp_add_sql(self, add_to: str, number: int = 1, interval: str = "hour") -> str:
+        # We override this from base dbt adapter because impala doesn't need to escape interval 
+        # duration string like postgres/redshift.
+        return f"{add_to} + interval {number} {interval}"
+        
