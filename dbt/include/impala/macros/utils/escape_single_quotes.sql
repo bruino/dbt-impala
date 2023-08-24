@@ -14,7 +14,6 @@
 # limitations under the License.
 #}
 
-{% macro impala__get_catalog(information_schema, schemas) -%}
-
-  {# no-op #}
-{% endmacro %}
+{% macro impala__escape_single_quotes(expression) -%}
+    {{ expression | replace("'","\\'") }}
+{%- endmacro %}

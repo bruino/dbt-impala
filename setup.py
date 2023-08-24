@@ -19,21 +19,20 @@ from setuptools import find_namespace_packages, setup
 
 # pull long description from README
 this_directory = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(this_directory, 'README.md'), 'r', encoding='utf8') as f:
+with open(os.path.join(this_directory, "README.md"), encoding="utf8") as f:
     long_description = f.read()
+
 
 # get this package's version from dbt/adapters/<name>/__version__.py
 def _get_plugin_version_dict():
-    _version_path = os.path.join(
-        this_directory, 'dbt', 'adapters', 'impala', '__version__.py'
-    )
-    _semver = r'''(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)'''
-    _pre = r'''((?P<prekind>a|b|rc)(?P<pre>\d+))?'''
-    _version_pattern = fr'''version\s*=\s*["']{_semver}{_pre}["']'''
+    _version_path = os.path.join(this_directory, "dbt", "adapters", "impala", "__version__.py")
+    _semver = r"""(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"""
+    _pre = r"""((?P<prekind>a|b|rc)(?P<pre>\d+))?"""
+    _version_pattern = rf"""version\s*=\s*["']{_semver}{_pre}["']"""
     with open(_version_path) as f:
         match = re.search(_version_pattern, f.read().strip())
         if match is None:
-            raise ValueError(f'invalid version at {_version_path}')
+            raise ValueError(f"invalid version at {_version_path}")
         return match.groupdict()
 
 
@@ -41,12 +40,13 @@ def _get_plugin_version_dict():
 def _get_dbt_core_version():
     parts = _get_plugin_version_dict()
     minor = "{major}.{minor}.0".format(**parts)
-    pre = (parts["prekind"]+"1" if parts["prekind"] else "")
+    pre = parts["prekind"] + "1" if parts["prekind"] else ""
     return f"{minor}{pre}"
+
 
 package_name = "dbt-impala"
 # make sure this always matches dbt/adapters/dbt_impala/__version__.py
-package_version = "1.1.2"
+package_version = "1.4.0"
 description = """The Impala adapter plugin for dbt"""
 
 dbt_core_version = _get_dbt_core_version()
@@ -56,26 +56,28 @@ setup(
     version=package_version,
     description="Impala adapter for DBT",
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     author="Cloudera",
     author_email="innovation-feedback@cloudera.com",
     url="https://github.com/cloudera/dbt-impala",
-    packages=find_namespace_packages(include=['dbt', 'dbt.*']),
-    data_files=[('', ['dbt/adapters/impala/.env'])],
+    packages=find_namespace_packages(include=["dbt", "dbt.*"]),
+    data_files=[("", ["dbt/adapters/impala/.env"])],
     include_package_data=True,
     install_requires=[
-        'dbt-core~={}'.format(dbt_core_version),
-        "impyla>=0.18a5",
-        "python-decouple>=3.6"
+        f"dbt-core~={dbt_core_version}",
+        "impyla==0.18",
+        "python-decouple>=3.6",
+        # "kerberos>=1.3.0", # Not required per README, doesn't work on Windows
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "License :: OSI Approved :: Apache Software License"
+        "License :: OSI Approved :: Apache Software License",
     ],
-    zip_safe=False
+    zip_safe=False,
 )

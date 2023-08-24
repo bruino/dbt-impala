@@ -14,7 +14,6 @@
 # limitations under the License.
 #}
 
-{% macro impala__get_catalog(information_schema, schemas) -%}
-
-  {# no-op #}
-{% endmacro %}
+{% macro impala__current_timestamp() -%}
+    current_timestamp()
+{%- endmacro %}

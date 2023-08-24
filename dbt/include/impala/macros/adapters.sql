@@ -111,10 +111,6 @@
   {%- endif %}
 {%- endmacro -%}
 
-{% macro impala__current_timestamp() -%}
-  current_timestamp()
-{%- endmacro %}
-
 /* to_timestamp function in impala takes 2 arguements, second being format and mandatory */
 {% macro impala__snapshot_string_as_time(timestamp) -%}
     {%- set result = "to_timestamp('" ~ timestamp ~ "', 'yyyy-MM-dd HH:mm:ss.SSSSSS')" -%}
@@ -153,23 +149,28 @@
 
   {%- set sql_header = config.get('sql_header', none) -%}
   {%- set is_external = config.get('external') -%}
+  {%- set table_type = config.get('table_type') -%}
 
   {{ sql_header if sql_header is not none }}
 
   create {% if is_external == true -%}external{%- endif %} table
     {{ relation.include(schema=true) }}
-    {{ ct_option_partition_cols(label="partitioned by") }}
+    {% if table_type == 'iceberg' -%}
+      {{ ct_option_partition_cols(label="partitioned by spec") }}
+    {% else %}
+      {{ ct_option_partition_cols(label="partitioned by") }}
+    {%- endif %}
     {{ ct_option_sort_cols(label="sort by") }}
     {{ ct_option_comment_relation(label="comment") }}
     {{ ct_option_row_format(label="row format") }}
     {{ ct_option_with_serdeproperties(label="with serdeproperties") }}
+    {%- if table_type == 'iceberg' -%} STORED BY ICEBERG {%- endif -%}
     {{ ct_option_stored_as(label="stored as") }}
-    {{ ct_option_location_clause(label="location") }} 
+    {{ ct_option_location_clause(label="location") }}
     {{ ct_option_cached_in(label="cached in") }}
     {{ ct_option_tbl_properties(label="tblproperties") }}
-  as 
+  as
     {{ sql }}
-  ;
 {%- endmacro %}
 
 {% macro impala__create_view_as(relation, sql) -%}
@@ -184,7 +185,6 @@
     {{ ct_option_comment_relation(label="comment") }}
   as
     {{ sql }}
-  ;
 {%- endmacro %}
 
 {% macro impala__create_schema(relation) -%}
@@ -200,10 +200,12 @@
 {% endmacro %}
 
 {% macro impala__drop_relation(relation) -%}
-  {% set rel_type = get_relation_type(relation) %}
-  {% call statement('drop_relation', auto_begin=False) -%}
-    drop {{ rel_type }} if exists {{ relation }}
-  {%- endcall %}
+  {% call statement('drop_relation_if_exists_table') %}
+    drop table if exists {{ relation }}
+  {% endcall %}
+  {% call statement('drop_relation_if_exists_view') %}
+    drop view if exists {{ relation }}
+  {% endcall %}
 {% endmacro %}
 
 {% macro is_relation_present(relation) -%}
@@ -214,7 +216,7 @@
       {% do return(true) %}
     {%- endfor -%}
   {%- endif -%}
-  
+
   {% do return(false) %}
 {% endmacro %}
 
@@ -224,7 +226,7 @@
 
   {%- if relation_exists -%}
     {% set result_set = run_query('describe extended ' ~ relation) %}
-  
+
     {% if execute %}
       {%- for rs in result_set -%}
         {%- if rs[0].startswith('Table Type') -%}
@@ -242,15 +244,18 @@
       {%- endfor -%}
     {%- endif -%}
   {%- endif -%}
-  
+
   {% do return(rel_type) %}
 {% endmacro %}
 
 {% macro impala__rename_relation(from_relation, to_relation) -%}
   {% set from_rel_type = get_relation_type(from_relation) %}
-  
-  {% call statement('drop_relation') %}
-    drop {{ from_rel_type }} if exists {{ to_relation }}
+
+  {% call statement('drop_relation_if_exists_table') %}
+    drop table if exists {{ to_relation }}
+  {% endcall %}
+  {% call statement('drop_relation_if_exists_view') %}
+    drop view if exists {{ to_relation }}
   {% endcall %}
   {% call statement('rename_relation') -%}
     {% if not from_rel_type %}
@@ -284,7 +289,7 @@
     {%- endcall %}
 {% endmacro %}
 
-/* impala has two hash functions, both are not perfect hash function: fnv_hash and murmur_hash, 
+/* impala has two hash functions, both are not perfect hash function: fnv_hash and murmur_hash,
    the earlier one seems be available from older version and hence is being used here */
 {% macro impala__snapshot_hash_arguments(args) -%}
     hex(fnv_hash(concat({%- for arg in args -%}
@@ -310,7 +315,7 @@
     {% endcall %}
     {%- set row_count = load_result('row_count') -%}
 
-    {% do return(row_count['data'][0][0]) %}    
+    {% do return(row_count['data'][0][0]) %}
 {% endmacro %}
 
 {% macro get_new_inserts_count(relation_name) %}
@@ -319,7 +324,7 @@
     {% endcall %}
     {%- set inserts_count = load_result('inserts_count') -%}
 
-    {% do return(inserts_count['data'][0][0]) %}    
+    {% do return(inserts_count['data'][0][0]) %}
 {% endmacro %}
 
 {% macro fetch_rows_to_insert(target_relation, staging_table, insert_cols) %}
@@ -327,6 +332,10 @@
 
     insert into {{target_relation}} ({{insert_cols_csv}}) select {{insert_cols_csv}} from {{staging_table}}
 {% endmacro %}
+
+{% macro impala__generate_database_name(custom_database_name=none, node=none) -%}
+  {% do return(None) %}
+{%- endmacro %}
 
 /* snapshots flow for impala */
 {% materialization snapshot, adapter='impala' %}
@@ -371,7 +380,7 @@
 
       /*
       1. if the staging table has no entries, then simply do nothing
-      2. if the staging table has entries, drop the existing snapshot table, build a new one 
+      2. if the staging table has entries, drop the existing snapshot table, build a new one
        */
 
       {% set row_count = get_row_count(staging_table) %}
@@ -386,7 +395,7 @@
         {% set build_sql = build_snapshot_table(strategy, model['compiled_sql']) %}
         {% set final_sql = create_table_as(False, target_relation, build_sql) %}
       {% elif row_count > 0 and row_count == insert_count %} /* insert, if all changes are of that type */
-        
+
         {% set source_columns = adapter.get_columns_in_relation(staging_table)
                                    | rejectattr('name', 'equalto', 'dbt_change_type')
                                    | rejectattr('name', 'equalto', 'DBT_CHANGE_TYPE')
@@ -398,7 +407,7 @@
         {% for column in source_columns %}
           {% do quoted_source_columns.append(adapter.quote(column.name)) %}
         {% endfor %}
-        
+
         {% set final_sql = fetch_rows_to_insert(target_relation, staging_table, quoted_source_columns) %}
       {% else %}
         {% set final_sql = 'select 1' %} /* dummy sql */
@@ -431,4 +440,3 @@
   {{ return({'relations': [target_relation]}) }}
 
 {% endmaterialization %}
-

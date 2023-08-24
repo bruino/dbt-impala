@@ -14,7 +14,18 @@
 # limitations under the License.
 #}
 
-{% macro impala__get_catalog(information_schema, schemas) -%}
+{% macro impala__split_part(string_text, delimiter_text, part_number) %}
 
-  {# no-op #}
+    {% set split_part_expr %}
+
+    split_part(
+        {{ string_text }},
+        {{ delimiter_text }},
+        {{ part_number }}
+    )
+
+    {% endset %}
+
+    {{ return(split_part_expr) }}
+
 {% endmacro %}

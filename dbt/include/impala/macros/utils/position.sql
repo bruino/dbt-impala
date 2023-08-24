@@ -14,7 +14,10 @@
 # limitations under the License.
 #}
 
-{% macro impala__get_catalog(information_schema, schemas) -%}
+{% macro impala__position(substring_text, string_text) %}
 
-  {# no-op #}
-{% endmacro %}
+    locate(
+        {{ substring_text }}, {{ string_text }}
+    )
+
+{%- endmacro -%}

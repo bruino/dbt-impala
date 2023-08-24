@@ -14,7 +14,8 @@
 # limitations under the License.
 #}
 
-{% macro impala__get_catalog(information_schema, schemas) -%}
+{% macro impala__dateadd(datepart, interval, from_date_or_timestamp) %}
 
-  {# no-op #}
+    date_add({{from_date_or_timestamp}}, interval {{interval}} {{datepart}})
+
 {% endmacro %}

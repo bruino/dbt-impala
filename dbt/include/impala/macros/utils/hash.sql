@@ -14,7 +14,13 @@
 # limitations under the License.
 #}
 
-{% macro impala__get_catalog(information_schema, schemas) -%}
-
-  {# no-op #}
-{% endmacro %}
+{% macro impala__hash(field) -%}
+    {#-- return hex hash value of field  --#}
+    hex(
+      fnv_hash(
+             cast(
+                {{ field }} as {{ api.Column.translate_type('string') }}
+             )
+      )
+    )
+{%- endmacro %}

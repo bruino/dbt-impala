@@ -10,13 +10,13 @@ The `dbt-impala` adapter allows you to use [dbt](https://www.getdbt.com/) along 
 
 ### Requirements
 
-Python >= 3.8
+Current version of dbt-impala work only with dbt-core 1.3 but not with dbt-core >= 1.4.
+We are actively working on next release 1.4 which will work with dbt-core 1.4
 
-dbt-core ~= 1.1.0
+Python >= 3.7
+dbt-core == 1.3.*
 
-impyla >= 0.18a5
-
-python-decouple >= 3.6
+For development/testing or contribution to the dbt-impala, please follow [Contributing](CONTRIBUTING.md) guidelines.
 
 ### Installing dbt-impala
 
@@ -41,17 +41,40 @@ demo_project:
 ```
 
 ## Supported features
-| Name | Supported |
-|------|-----------|
-|Materialization: Table|Yes|
-|Materialization: View|Yes|
-|Materialization: Incremental - Append|Yes|
-|Materialization: Incremental - Insert+Overwrite|Yes|
-|Materialization: Incremental - Merge|No|
-|Materialization: Ephemeral|No|
-|Seeds|Yes|
-|Tests|Yes|
-|Snapshots|Yes|
-|Documentation|Yes|
-|Authentication: LDAP|Yes|
-|Authentication: Kerberos|Yes|
+| Name | Supported | Iceberg |
+|------|-----------|---------|
+|Materialization: View|Yes| N/A |
+|Materialization: Table|Yes| Yes |
+|Materialization: Table with Partitions |Yes| Yes |
+|Materialization: Incremental - Append|Yes| Yes |
+|Materialization: Incremental - Append with Partitions |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes |
+|Materialization: Incremental - Merge|No| No |
+|Materialization: Ephemeral|Yes| Yes |
+|Seeds|Yes| Yes |
+|Tests|Yes| Yes |
+|Snapshots|No| No |
+|Documentation|Yes| Yes |
+|Authentication: LDAP|Yes| Yes |
+|Authentication: Kerberos|Yes| No |
+
+### Tests Coverage
+
+#### Functional Tests
+| Name | Base | Iceberg |
+|------|------|---------|
+|Materialization: View|Yes| N/A |
+|Materialization: Table|Yes| Yes |
+|Materialization: Table with Partitions |Yes| Yes |
+|Materialization: Incremental - Append|Yes| Yes |
+|Materialization: Incremental - Append with Partitions |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite |Yes| Yes |
+|Materialization: Incremental - Insert+Overwrite with Partition |Yes| Yes |
+|Materialization: Ephemeral|Yes| Yes |
+|Seeds|Yes| Yes |
+|Tests|Yes| Yes |
+|Snapshots|No| No |
+|Documentation| Yes | Yes |
+|Authentication: LDAP|Yes| Yes |
+|Authentication: Kerberos|No| No |
