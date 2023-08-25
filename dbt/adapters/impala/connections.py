@@ -72,7 +72,7 @@ class ImpalaCredentials(Credentials):
         data = super().__pre_deserialize__(data)
         if "database" not in data:
             data["database"] = None
-        return datag
+        return data
 
     def __post_init__(self):
         # impala classifies database and schema as the same thing
