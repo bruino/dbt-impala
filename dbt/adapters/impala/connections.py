@@ -16,7 +16,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 import time
-from dbt.exceptions import DbtRuntimeError
 
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
@@ -78,7 +77,7 @@ class ImpalaCredentials(Credentials):
     def __post_init__(self):
         # impala classifies database and schema as the same thing
         if self.database is not None and self.database != self.schema:
-            raise DbtRuntimeError(
+            raise RuntimeError(
                 f"    schema: {self.schema} \n"
                 f"    database: {self.database} \n"
                 f"On Impala, database must be omitted or have the same value as"
@@ -169,12 +168,12 @@ class ImpalaConnectionManager(SQLConnectionManager):
             yield
         except HttpError as httpError:
             logger.debug(f"Authorization error: {httpError}")
-            raise DbtRuntimeError(
+            raise RuntimeError(
                 "HTTP Authorization error: " + str(httpError) + ", please check your credentials"
             )
         except HiveServer2Error as servError:
             logger.debug(f"Server connection error: {servError}")
-            raise DbtRuntimeError(
+            raise RuntimeError(
                 "Unable to establish connection to Impala server: " + str(servError)
             )
         except DatabaseError as dbError:
@@ -182,7 +181,7 @@ class ImpalaConnectionManager(SQLConnectionManager):
             raise dbt.exceptions.DatabaseException("Database Connection error: " + str(dbError))
         except Exception as exc:
             logger.debug(f"Error running SQL: {sql}")
-            raise DbtRuntimeError(str(exc))
+            raise RuntimeError(str(exc))
 
     @classmethod
     def open(cls, connection):
