@@ -395,7 +395,11 @@ class ImpalaConnectionManager(SQLConnectionManager):
             fire_event(SQLQuery(conn_name=connection.name, sql=log_sql))
             pre = time.time()
 
-            cursor = connection.handle.cursor()
+            # cursor = connection.handle.cursor()
+            if connection.credentials.auth_type not in ["LDAP", "ldap", "GSSAPI", "gssapi", "kerberos"]:
+                cursor = connection.handle.cursor(user=connection.credentials.username)
+            else:
+                cursor = connection.handle.cursor()
 
             # paramstyle parameter is needed for the datetime object to be correctly quoted when
             # running substitution query from impyla. this fix also depends on a patch for impyla:
